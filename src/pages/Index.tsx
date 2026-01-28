@@ -21,6 +21,7 @@ const Index = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [newGameTitle, setNewGameTitle] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const [games, setGames] = useState<Game[]>([
@@ -98,9 +99,18 @@ const Index = () => {
     }
   };
 
-  const filteredGames = games.filter(game =>
-    game.title.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const handlePlayGame = (game: Game) => {
+    toast({
+      title: '🎮 Запуск игры',
+      description: `Запускаем ${game.title}${game.fileName ? ` (${game.fileName})` : ''}...`,
+    });
+  };
+
+  const filteredGames = games.filter(game => {
+    const matchesSearch = game.title.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesFavorites = !showFavoritesOnly || game.isFavorite;
+    return matchesSearch && matchesFavorites;
+  });
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-purple-950/20">
@@ -122,6 +132,15 @@ const Index = () => {
               className="pl-12 h-12 bg-card border-primary/20 focus:border-primary text-foreground"
             />
           </div>
+          <Button 
+            size="lg"
+            variant={showFavoritesOnly ? "default" : "outline"}
+            onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
+            className={showFavoritesOnly ? "bg-accent hover:bg-accent/90 text-accent-foreground gap-2" : "border-primary/20 hover:bg-card gap-2"}
+          >
+            <Icon name="Heart" size={20} className={showFavoritesOnly ? "fill-current" : ""} />
+            Избранное
+          </Button>
           <Button 
             size="lg" 
             onClick={() => setIsDialogOpen(true)}
@@ -167,6 +186,7 @@ const Index = () => {
               <CardContent className="p-4">
                 <h3 className="text-xl font-bold mb-3 text-foreground">{game.title}</h3>
                 <Button 
+                  onClick={() => handlePlayGame(game)}
                   className="w-full bg-secondary hover:bg-secondary/90 text-secondary-foreground font-bold gap-2"
                 >
                   <Icon name="Play" size={18} />
