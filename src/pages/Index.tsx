@@ -1,8 +1,11 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { useToast } from '@/hooks/use-toast';
 import Icon from '@/components/ui/icon';
 
 interface Game {
@@ -10,10 +13,16 @@ interface Game {
   title: string;
   image: string;
   isFavorite: boolean;
+  fileName?: string;
 }
 
 const Index = () => {
   const [searchQuery, setSearchQuery] = useState('');
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [newGameTitle, setNewGameTitle] = useState('');
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { toast } = useToast();
   const [games, setGames] = useState<Game[]>([
     {
       id: '1',
@@ -47,6 +56,48 @@ const Index = () => {
     ));
   };
 
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setSelectedFile(file);
+      if (!newGameTitle) {
+        setNewGameTitle(file.name.replace(/\.[^/.]+$/, ''));
+      }
+    }
+  };
+
+  const handleAddGame = () => {
+    if (!selectedFile || !newGameTitle.trim()) {
+      toast({
+        title: 'Ошибка',
+        description: 'Выберите файл и введите название игры',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const newGame: Game = {
+      id: Date.now().toString(),
+      title: newGameTitle,
+      image: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=800',
+      isFavorite: false,
+      fileName: selectedFile.name,
+    };
+
+    setGames([newGame, ...games]);
+    toast({
+      title: 'Игра добавлена!',
+      description: `${newGameTitle} добавлена в библиотеку`,
+    });
+
+    setIsDialogOpen(false);
+    setNewGameTitle('');
+    setSelectedFile(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
   const filteredGames = games.filter(game =>
     game.title.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -73,6 +124,7 @@ const Index = () => {
           </div>
           <Button 
             size="lg" 
+            onClick={() => setIsDialogOpen(true)}
             className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold px-8 neon-border gap-2"
           >
             <Icon name="Plus" size={20} />
@@ -132,6 +184,65 @@ const Index = () => {
           </div>
         )}
       </div>
+
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="bg-card border-primary/20">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold text-primary">Добавить новую игру</DialogTitle>
+            <DialogDescription className="text-muted-foreground">
+              Выберите исполняемый файл игры и введите название
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 mt-4">
+            <div>
+              <Label htmlFor="game-file" className="text-foreground mb-2 block">
+                Файл игры
+              </Label>
+              <Input
+                id="game-file"
+                ref={fileInputRef}
+                type="file"
+                accept=".exe,.app,.sh,.bat"
+                onChange={handleFileSelect}
+                className="bg-background border-primary/20 text-foreground"
+              />
+              {selectedFile && (
+                <p className="text-sm text-muted-foreground mt-2">
+                  Выбран: {selectedFile.name}
+                </p>
+              )}
+            </div>
+            <div>
+              <Label htmlFor="game-title" className="text-foreground mb-2 block">
+                Название игры
+              </Label>
+              <Input
+                id="game-title"
+                placeholder="Введите название..."
+                value={newGameTitle}
+                onChange={(e) => setNewGameTitle(e.target.value)}
+                className="bg-background border-primary/20 text-foreground"
+              />
+            </div>
+            <div className="flex gap-3 pt-4">
+              <Button
+                onClick={handleAddGame}
+                className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground"
+              >
+                <Icon name="Plus" size={18} className="mr-2" />
+                Добавить
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => setIsDialogOpen(false)}
+                className="flex-1 border-primary/20"
+              >
+                Отмена
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
